@@ -1,19 +1,15 @@
 #!/bin/bash
 #Version 3.0
-#Released 2021-02-11
+#Released 2021-03-12
 
 #Inputs parameters: a path to the original file and years to process (yyyy-yyyy)
 #Inputs parameters check
 #Check if we have only 2 input parameters
 if [ $# -ne 2 ]; then
-    echo "Error 4"
     exit 4
 fi
 #Check if the file exists in the given path
-if [ -e $1 ]; then
-    echo "Source file exists"
-else
-    echo "Error 3"
+if [ ! -e $1 ]; then
     exit 3
 fi
 
@@ -45,25 +41,11 @@ for ((i = $start_year; i <= $end_year; i++)); do
     grep $i $temp_output_file_1 | cut -d',' -f1,2,4 >>$temp_output_file_2
 done
 
-#The main cleaning procedure
-#Go through CSV file
-prevIFS=$IFS
-IFS=','
-while read temperature year country; do
-    #If we have incomplete data in “Temperature - (Celsius)”, “Year” fields – those rows
-    #will be skipped
-    if [[ -z "$temperature" ]] || [[ -z "$year" ]]; then
-        continue
-    #If we have incomplete data in “Country” field – those values will be replaced to “unknown” value
-    elif [ -z "$country" ]; then
-        result_string="$temperature;$year;unknown"
-        echo $result_string >>$final_output_file
-    else
-        result_string="$temperature;$year;$country"
-        echo $result_string >>$final_output_file
-    fi
-done <$temp_output_file_2
-IFS=$prevIFS
+# Delete empty values 
+awk -F"," '$1!="" && $2!="" ' $temp_output_file_2 > temperature.csv
+# Replacing empty country to "unknown" 
+awk ' BEGIN { FS = OFS = "," } { if($3=="") $3 = "unknown" }; 1 ' temperature.csv  > $temp_output_file_1
+cat $temp_output_file_1 > temperature.csv
 
 #Delete temporary files
 rm -f temp_1.csv
